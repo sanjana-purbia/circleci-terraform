@@ -21,14 +21,16 @@ jobs:
   docker:
     - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
   steps:
+    - attach_workspace:
+        at: /stage 
     - run:
         name: terraform apply
         command: |
+          cd /stage 
           terraform apply -auto-approve
     - persist_to_workspace:
-        root: .
+        root: /stage
         paths:
-          - .
 
 
 workflows:
