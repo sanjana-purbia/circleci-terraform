@@ -4,14 +4,16 @@ orbs:
 
 jobs:
   setup-credentials:
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
       - run:
-        name: Configure AWS Credentials
-        command: |
-          mkdir -p ~/.aws
-          echo "[default]" > ~/.aws/credentials
-          echo "aws_access_key_id=${AWS_ACCESS_KEY_ID}" >> ~/.aws/credentials
-          echo "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" >> ~/.aws/credentials
+          name: Configure AWS Credentials
+          command: |
+            mkdir -p ~/.aws
+            echo "[default]" > ~/.aws/credentials
+            echo "aws_access_key_id=${AWS_ACCESS_KEY_ID}" >> ~/.aws/credentials
+            echo "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" >> ~/.aws/credentials
 
   plan-apply:
     docker:
@@ -26,7 +28,7 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - .  # Specify the paths you want to persist
+            - .  # Specify what to persist
 
   apply:
     docker:
@@ -37,17 +39,20 @@ jobs:
       - run:
           name: terraform apply
           command: |
-            cd /workspace  # Navigate to the workspace directory if needed
+            cd /workspace  # Ensure you're in the correct directory
             terraform apply -auto-approve
       - persist_to_workspace:
           root: /workspace
           paths:
-            - .  # Specify the paths you want to persist
+            - .  # Specify what to persist
 
 workflows:
   plan_approve_apply:
     jobs:
-      - plan-apply
+      - setup-credentials
+      - plan-apply:
+          requires:
+            - setup-credentials
       - hold-apply:
           type: approval
           requires:
