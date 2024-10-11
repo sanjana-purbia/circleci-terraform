@@ -1,0 +1,44 @@
+version: 2.1
+orbs:
+  base-packages: twdps/base-packages@0.1.3
+
+jobs:
+  plan-apply:
+    # working_directory: /tmp/project
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - checkout
+      - run:
+          name: terraform init & plan
+          command: |
+            terraform init 
+            terraform plan
+      - persist_to_workspace:
+          root: .
+          paths:
+  apply:
+  docker:
+    - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+  steps:
+    - run:
+        name: terraform apply
+        command: |
+          terraform apply -auto-approve
+    - persist_to_workspace:
+        root: .
+        paths:
+          - .
+
+
+workflows:
+  plan_approve_apply:
+    jobs:
+      - plan-apply
+      - hold-apply:
+          type: approval
+          requires:
+            - plan-apply
+      - apply:
+          requires:
+            - hold-apply
