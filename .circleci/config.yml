@@ -4,7 +4,6 @@ orbs:
 
 jobs:
   plan-apply:
-    # working_directory: /tmp/project
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -17,21 +16,23 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-  apply:
-  docker:
-    - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
-  steps:
-    - attach_workspace:
-        at: /stage 
-    - run:
-        name: terraform apply
-        command: |
-          cd /stage 
-          terraform apply -auto-approve
-    - persist_to_workspace:
-        root: /stage
-        paths:
+            - .  # Specify the paths you want to persist
 
+  apply:
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - attach_workspace:
+          at: /workspace
+      - run:
+          name: terraform apply
+          command: |
+            cd /workspace  # Navigate to the workspace directory if needed
+            terraform apply -auto-approve
+      - persist_to_workspace:
+          root: /workspace
+          paths:
+            - .  # Specify the paths you want to persist
 
 workflows:
   plan_approve_apply:
