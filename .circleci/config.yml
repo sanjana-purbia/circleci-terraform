@@ -1,62 +1,49 @@
-version: '2.1'
+version: 2.1
+
 orbs:
-  base-packagse: twdps/base-packages@0.1.0
-jobs:
-  my-machine-job:
+  terraform: circleci/terraform@2.0.0
+  aws: circleci/aws@2.0.0
+
+executors:
+  ubuntu:
     machine:
       image: ubuntu-2204:current
-    resource_class: medium
-executors:
-  terraform-executor:
-    docker:
-      - image: 
-  setup:
-    executor: terraform-executor
-    steps:
-      - checkout
-      - run:
-          name: Install AWS CLI 
-          command: |
-              mkdir -p ~/.aws
-              echo "[default]" > ~/.aws/credentials
-              echo "aws_access_key_id=${AWS_ACCESS_KEY_ID}" >> ~/.aws/credentials
-              echo "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" >> ~/.aws/credentials
 
-  terraform_init:
-    executor: terraform-executor
+jobs:
+  terraform:
+    executor: ubuntu
     steps:
-      - checkout
-      - run:
-          name: Terraform Init
-          command: terraform init
+      - checkout  # Check out your source code
+      
+      - aws/configure-aws-credentials:
+          aws_access_key_id: AWS_ACCESS_KEY_ID
+          aws_secret_access_key: AWS_SECRET_ACCESS_KEY
+          aws_region: YOUR_AWS_REGION
 
-  terraform_apply:
-    executor: terraform-executor
-    steps:
-      - checkout
-      - run:
-          name: Terraform Apply
-          command: terraform apply -auto-approve
+      - terraform/init:
+          - run:
+            name: init and plan
+            command: |
+              terraform init
 
-  terraform_destroy:
-    executor: terraform-executor
-    steps:
-      - checkout
-      - run:
-          name: Terraform Destroy
-          command: terraform destroy -auto-approve
+      - terraform/plan:
+        - run:
+            name: init and plan
+            command: |
+              terraform plan
+
+      - terraform/apply:
+          - run:
+              name: apply
+              command: |
+                terraform apply --auto-approve
+          # auto_approve: true  # Automatically approve the apply
 
 workflows:
   version: 2
-  deploy:
+  terraform:
     jobs:
-      - setup
-      - terraform_init:
-          requires:
-            - setup
-      - terraform_apply:
-          requires:
-            - terraform_init
+      - terraform
             
 # version: 2.1
 # orbs:
@@ -117,6 +104,6 @@ workflows:
 #           type: approval
 #           requires:
 #             - plan-apply
-      - apply:
-          requires:
-            - hold-apply
+      # - apply:
+      #     requires:
+      #       - hold-apply
