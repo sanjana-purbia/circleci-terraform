@@ -10,8 +10,6 @@ executors:
   terraform-executor:
     docker:
       - image: 
-
-jobs:
   setup:
     executor: terraform-executor
     steps:
