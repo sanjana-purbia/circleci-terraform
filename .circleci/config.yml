@@ -1,62 +1,124 @@
-version: 2.1
+version: '2.1'
 orbs:
-  base-packages: twdps/base-packages@0.1.3
+  base-packagse: twdps/base-packages@0.1.0
+jobs:
+  my-machine-job:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
+executors:
+  terraform-executor:
+    docker:
+      - image: 
 
 jobs:
-  setup-credentials:
-    docker:
-      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
-    steps:
-      - run:
-          name: Configure AWS Credentials
-          command: |
-            mkdir -p ~/.aws
-            echo "[default]" > ~/.aws/credentials
-            echo "aws_access_key_id=${AWS_ACCESS_KEY_ID}" >> ~/.aws/credentials
-            echo "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" >> ~/.aws/credentials
-
-  plan-apply:
-    docker:
-      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+  setup:
+    executor: terraform-executor
     steps:
       - checkout
       - run:
-          name: terraform init & plan
+          name: Install AWS CLI 
           command: |
-            terraform init 
-            terraform plan
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .  # Specify what to persist
+              mkdir -p ~/.aws
+              echo "[default]" > ~/.aws/credentials
+              echo "aws_access_key_id=${AWS_ACCESS_KEY_ID}" >> ~/.aws/credentials
+              echo "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" >> ~/.aws/credentials
 
-  apply:
-    docker:
-      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+  terraform_init:
+    executor: terraform-executor
     steps:
-      - attach_workspace:
-          at: /workspace
+      - checkout
       - run:
-          name: terraform apply
-          command: |
-            cd /workspace  # Ensure you're in the correct directory
-            terraform apply -auto-approve
-      - persist_to_workspace:
-          root: /workspace
-          paths:
-            - .  # Specify what to persist
+          name: Terraform Init
+          command: terraform init
+
+  terraform_apply:
+    executor: terraform-executor
+    steps:
+      - checkout
+      - run:
+          name: Terraform Apply
+          command: terraform apply -auto-approve
+
+  terraform_destroy:
+    executor: terraform-executor
+    steps:
+      - checkout
+      - run:
+          name: Terraform Destroy
+          command: terraform destroy -auto-approve
 
 workflows:
-  plan_approve_apply:
+  version: 2
+  deploy:
     jobs:
-      - setup-credentials
-      - plan-apply:
+      - setup
+      - terraform_init:
           requires:
-            - setup-credentials
-      - hold-apply:
-          type: approval
+            - setup
+      - terraform_apply:
           requires:
-            - plan-apply
+            - terraform_init
+            
+# version: 2.1
+# orbs:
+#   base-packages: twdps/base-packages@0.1.3
+
+# jobs:
+#   setup-credentials:
+#     docker:
+#       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+#     steps:
+#       - run:
+#           name: Configure AWS Credentials
+#           command: |
+#             mkdir -p ~/.aws
+#             echo "[default]" > ~/.aws/credentials
+#             echo "aws_access_key_id=${AWS_ACCESS_KEY_ID}" >> ~/.aws/credentials
+#             echo "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" >> ~/.aws/credentials
+
+#   plan-apply:
+#     docker:
+#       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+#     steps:
+#       - checkout
+#       - run:
+#           name: terraform init & plan
+#           command: |
+#             terraform init 
+#             terraform plan
+#       - persist_to_workspace:
+#           root: .
+#           paths:
+#             - .  # Specify what to persist
+
+#   apply:
+#     docker:
+#       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+#     steps:
+#       - attach_workspace:
+#           at: /workspace
+#       - run:
+#           name: terraform apply
+#           command: |
+#             cd /workspace  # Ensure you're in the correct directory
+#             terraform apply -auto-approve
+#       - persist_to_workspace:
+#           root: /workspace
+#           paths:
+#             - .  # Specify what to persist
+
+# workflows:
+#   plan_approve_apply:
+#     jobs:
+#       - setup-credentials
+#       - plan-apply:
+#           requires:
+#             - setup-credentials
+#       - hold-apply:
+#           type: approval
+#           requires:
+#             - plan-apply
       - apply:
           requires:
             - hold-apply
